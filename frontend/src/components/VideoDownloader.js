@@ -302,18 +302,55 @@ const VideoDownloader = ({ onDownloadComplete }) => {
 
   const downloadFile = async (downloadId) => {
     try {
-      await videoApi.downloadFile(downloadId);
-      
-      toast({
-        title: "File Downloaded",
-        description: "Video file has been saved to your device",
-      });
+      if (useLocalStorage) {
+        // Store in local storage instead of direct download
+        const download = currentDownloads.find(d => d.download_id === downloadId);
+        if (download && download.metadata) {
+          await localStorageService.downloadAndStore(downloadId, download.metadata);
+          
+          toast({
+            title: "Saved to Local Storage! 💾",
+            description: "Video has been saved to your local storage",
+          });
+        }
+      } else {
+        // Traditional file download
+        await videoApi.downloadFile(downloadId);
+        
+        toast({
+          title: "File Downloaded 📥",
+          description: "Video file has been saved to your device",
+        });
+      }
     } catch (error) {
       toast({
         title: "Download Failed",
         description: error.message,
         variant: "destructive"
       });
+    }
+  };
+
+  const handleStickerSelect = (sticker) => {
+    setSelectedStickers(prev => [...prev, sticker]);
+    setShowStickerLibrary(false);
+    toast({
+      title: "Sticker Added! ✨",
+      description: "Sticker has been added to your collection",
+    });
+  };
+
+  const playMedia = (downloadId) => {
+    const download = currentDownloads.find(d => d.download_id === downloadId);
+    if (download) {
+      // For demo purposes, we'll use a placeholder URL
+      // In real implementation, this would be the actual file URL
+      setCurrentMedia({
+        url: localStorageService.getFileUrl(downloadId) || "placeholder.mp4",
+        type: localStorageService.getFileType(downloadId) || 'video',
+        title: download.title || 'Downloaded Media'
+      });
+      setShowMediaPlayer(true);
     }
   };
 
