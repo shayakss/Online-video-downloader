@@ -341,8 +341,8 @@
 }
 
 .input-professional:focus {
-  border-color: var(--neon-primary);
-  box-shadow: var(--shadow-neon-md);
+  border-color: #00ffff;
+  box-shadow: 0 4px 16px rgba(0, 255, 255, 0.2);
   outline: none;
 }
 
@@ -357,6 +357,6 @@
 }
 
 .dark .input-professional:focus {
-  border-color: var(--neon-primary);
-  box-shadow: var(--shadow-neon-lg);
+  border-color: #00ffff;
+  box-shadow: 0 8px 24px rgba(0, 255, 255, 0.25);
 }
