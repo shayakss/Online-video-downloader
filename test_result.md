@@ -146,6 +146,9 @@ backend:
         - working: true
           agent: "testing"
           comment: "The GET /api/quality-options/{platform} endpoint returns appropriate quality options for all supported platforms (YouTube, Instagram, TikTok, Facebook)."
+        - working: true
+          agent: "testing"
+          comment: "Verified that the quality options retrieval endpoint is still working correctly after frontend fixes. Returns appropriate quality options for YouTube including best, 2160p, 1440p, 1080p, 720p, etc."
 
   - task: "Video Download Initiation"
     implemented: true
