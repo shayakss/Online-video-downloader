@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
-import { Sparkles, Star, Heart, ThumbsUp, Fire, Zap, Music, Video, Download } from 'lucide-react';
+import { Sparkles, Star, Heart, ThumbsUp, Flame, Zap, Music, Video, Download } from 'lucide-react';
 
 const StickerLibrary = ({ onStickerSelect, isVisible, onClose }) => {
   const [selectedCategory, setSelectedCategory] = useState('emoji');
