@@ -397,14 +397,14 @@ const VideoDownloader = ({ onDownloadComplete }) => {
           {/* Single Download Tab */}
           <TabsContent value="single" className="space-y-6">
             {/* URL Input Section */}
-            <Card className="glass-card shadow-2xl border-0 animate-fade-in-scale">
+            <Card className="glass-card shadow-2xl border-0 animate-fade-in-scale border border-cyan-400/30">
               <CardHeader>
                 <CardTitle className="flex items-center gap-3">
-                  <div className="p-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl">
+                  <div className="p-2 bg-gradient-to-r from-cyan-500 to-purple-500 rounded-xl animate-neon-glow">
                     <Link className="w-5 h-5 text-white" />
                   </div>
-                  Smart URL Analyzer
-                  <Badge className="bg-gradient-to-r from-green-400 to-emerald-500 text-white border-0">
+                  <span className="neon-text">Smart URL Analyzer</span>
+                  <Badge className="bg-gradient-to-r from-green-400 to-emerald-500 text-black border-0 animate-cyberpunk-flicker">
                     AI Powered
                   </Badge>
                 </CardTitle>
