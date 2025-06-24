@@ -738,6 +738,24 @@ const VideoDownloader = ({ onDownloadComplete }) => {
           </Card>
         )}
       </div>
+      
+      {/* Sticker Library Modal */}
+      <StickerLibrary 
+        isVisible={showStickerLibrary}
+        onStickerSelect={handleStickerSelect}
+        onClose={() => setShowStickerLibrary(false)}
+      />
+      
+      {/* Media Player Modal */}
+      {showMediaPlayer && currentMedia && (
+        <NeonMediaPlayer
+          mediaUrl={currentMedia.url}
+          mediaType={currentMedia.type}
+          title={currentMedia.title}
+          isVisible={showMediaPlayer}
+          onClose={() => setShowMediaPlayer(false)}
+        />
+      )}
     </div>
   );
 };
