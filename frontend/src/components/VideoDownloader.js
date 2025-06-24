@@ -23,13 +23,23 @@ import {
   BarChart3,
   Settings,
   Globe,
-  Smartphone
+  Smartphone,
+  Star,
+  Heart,
+  Smile,
+  Music,
+  Video,
+  Save
 } from 'lucide-react';
 import { videoApi, detectPlatform, formatDuration, formatDate } from '../services/api';
 import { ProfessionalHeader } from './ProfessionalHeader';
 import { BatchProcessor } from './BatchProcessor';
 import { VideoPreviewCarousel } from './VideoPreviewCarousel';
 import { LoadingSpinner } from './LoadingSpinner';
+import NeonPlatformIcon from './NeonPlatformIcon';
+import StickerLibrary from './StickerLibrary';
+import NeonMediaPlayer from './NeonMediaPlayer';
+import localStorageService from '../services/localStorageService';
 
 const VideoDownloader = ({ onDownloadComplete }) => {
   const [url, setUrl] = useState('');
