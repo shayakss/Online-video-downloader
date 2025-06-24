@@ -5,9 +5,12 @@ import time
 import unittest
 import sys
 import os
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 import subprocess
 import re
+import asyncio
+import statistics
+from datetime import datetime
 
 # Get the backend URL from the frontend .env file
 BACKEND_URL = None
@@ -27,6 +30,144 @@ if not BACKEND_URL:
 
 API_URL = f"{BACKEND_URL}/api"
 print(f"Using API URL: {API_URL}")
+
+# Performance testing utilities
+class DownloadSpeedTest:
+    """Utility class for measuring download speed and performance"""
+    
+    def __init__(self, api_url: str):
+        self.api_url = api_url
+        self.download_ids = []
+        
+    def cleanup(self):
+        """Clean up any downloads created during testing"""
+        for download_id in self.download_ids:
+            try:
+                requests.delete(f"{self.api_url}/download/{download_id}")
+            except Exception as e:
+                print(f"Error cleaning up download {download_id}: {e}")
+    
+    def start_download(self, url: str, platform: str, quality: str = "best") -> Optional[str]:
+        """Start a download and return the download_id"""
+        payload = {
+            "url": url,
+            "quality": quality,
+            "format": "mp4",
+            "educational_purpose": True,
+            "user_id": f"perf_test_{int(time.time())}"
+        }
+        
+        try:
+            response = requests.post(f"{self.api_url}/download/start", json=payload)
+            if response.status_code == 200:
+                data = response.json()
+                download_id = data["download_id"]
+                self.download_ids.append(download_id)
+                return download_id
+            else:
+                print(f"Failed to start download: {response.status_code} - {response.text}")
+                return None
+        except Exception as e:
+            print(f"Error starting download: {e}")
+            return None
+    
+    def track_download_progress(self, download_id: str, poll_interval: float = 1.0, timeout: int = 300) -> Dict[str, Any]:
+        """Track download progress and collect performance metrics"""
+        start_time = time.time()
+        progress_data_points = []
+        speeds = []
+        
+        try:
+            completed = False
+            last_progress = 0
+            
+            for _ in range(int(timeout / poll_interval)):
+                response = requests.get(f"{self.api_url}/download/progress/{download_id}")
+                if response.status_code != 200:
+                    break
+                    
+                progress_data = response.json()
+                current_time = time.time() - start_time
+                
+                # Extract speed if available
+                if progress_data.get("speed"):
+                    speed_str = progress_data["speed"]
+                    try:
+                        # Convert speed string (like "1.2 MiB/s") to MB/s
+                        speed_value = float(speed_str.split()[0])
+                        if "KiB/s" in speed_str:
+                            speed_value /= 1024
+                        elif "GiB/s" in speed_str:
+                            speed_value *= 1024
+                        speeds.append(speed_value)
+                    except (ValueError, IndexError):
+                        pass
+                
+                # Calculate progress delta
+                progress_delta = progress_data["progress_percent"] - last_progress
+                last_progress = progress_data["progress_percent"]
+                
+                # Store progress data point
+                progress_data_points.append({
+                    "time": current_time,
+                    "progress": progress_data["progress_percent"],
+                    "progress_delta": progress_delta,
+                    "speed": progress_data.get("speed"),
+                    "eta": progress_data.get("eta"),
+                    "status": progress_data["status"]
+                })
+                
+                # Check if download is complete or failed
+                if progress_data["status"] in ["completed", "failed", "cancelled"]:
+                    completed = True
+                    break
+                    
+                time.sleep(poll_interval)
+            
+            end_time = time.time()
+            total_time = end_time - start_time
+            
+            # Get final download metadata
+            metadata = None
+            try:
+                metadata_response = requests.get(f"{self.api_url}/download/metadata/{download_id}")
+                if metadata_response.status_code == 200:
+                    metadata = metadata_response.json()
+            except Exception:
+                pass
+            
+            # Calculate performance metrics
+            avg_speed = statistics.mean(speeds) if speeds else 0
+            max_speed = max(speeds) if speeds else 0
+            
+            # Get file size if available
+            file_size_mb = 0
+            if metadata and metadata.get("metadata") and metadata["metadata"].get("file_size"):
+                try:
+                    file_size_str = metadata["metadata"]["file_size"]
+                    if "MB" in file_size_str:
+                        file_size_mb = float(file_size_str.split()[0])
+                except (ValueError, IndexError):
+                    pass
+            
+            return {
+                "download_id": download_id,
+                "completed": completed,
+                "total_time": total_time,
+                "avg_speed_mbs": avg_speed,
+                "max_speed_mbs": max_speed,
+                "progress_points": progress_data_points,
+                "file_size_mb": file_size_mb,
+                "metadata": metadata
+            }
+            
+        except Exception as e:
+            print(f"Error tracking download progress: {e}")
+            return {
+                "download_id": download_id,
+                "completed": False,
+                "error": str(e)
+            }
 
 class VideoDownloaderAPITest(unittest.TestCase):
     """Test suite for the Video Downloader API"""
