@@ -116,6 +116,9 @@ backend:
         - working: true
           agent: "testing"
           comment: "The API health check endpoint at GET /api/ returns the expected response with status 200."
+        - working: true
+          agent: "testing"
+          comment: "Verified that the health check endpoint is still working correctly after frontend fixes. Returns status 200 with the expected message."
 
   - task: "Video URL Validation"
     implemented: true
