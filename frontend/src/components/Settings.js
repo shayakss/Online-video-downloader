@@ -5,7 +5,7 @@ import { Switch } from './ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Slider } from './ui/slider';
 import { Badge } from './ui/badge';
-import { toast } from './ui/toast';
+import { useToast } from '../hooks/use-toast';
 import { 
   Settings as SettingsIcon, 
   Download, 
@@ -34,6 +34,8 @@ const Settings = () => {
 
   const [storageUsed, setStorageUsed] = useState(0);
   const [estimatedTotal, setEstimatedTotal] = useState(5000); // MB
+
+  const { toast } = useToast();
 
   useEffect(() => {
     // Load settings from localStorage
