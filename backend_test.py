@@ -6,6 +6,7 @@ import unittest
 import sys
 import os
 from typing import Dict, Any, Optional
+import subprocess
 
 # Get the backend URL from the frontend .env file
 BACKEND_URL = None
