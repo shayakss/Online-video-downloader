@@ -179,6 +179,9 @@ backend:
         - working: true
           agent: "testing"
           comment: "The GET /api/download/progress/{download_id} endpoint correctly tracks and reports download progress."
+        - working: true
+          agent: "testing"
+          comment: "Verified that the download progress tracking endpoint is still working correctly after frontend fixes. Successfully tracks and reports download progress with status and progress percentage."
 
   - task: "Download Metadata Retrieval"
     implemented: true
