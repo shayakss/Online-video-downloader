@@ -276,18 +276,40 @@ class VideoDownloaderService:
             
             return download_request
     
-    def _get_format_selector(self, quality: str, platform: PlatformType) -> str:
-        """Get yt-dlp format selector based on quality and platform"""
+    def _get_format_selector(self, quality: str, platform: PlatformType, format_type: str = "mp4") -> str:
+        """Get yt-dlp format selector based on quality, platform, and format"""
+        # For audio formats, use audio-specific selectors
+        if format_type in ['mp3', 'm4a', 'wav']:
+            if quality == "best":
+                return "bestaudio[ext=m4a]/bestaudio[ext=mp4]/bestaudio"
+            elif quality == "worst":
+                return "worstaudio"
+            else:
+                return "bestaudio[ext=m4a]/bestaudio[ext=mp4]/bestaudio"
+        
+        # For video formats
         if quality == "best":
-            return "best[ext=mp4]/best"
+            if format_type == "webm":
+                return "best[ext=webm]/best"
+            else:
+                return "best[ext=mp4]/best"
         elif quality == "worst":
-            return "worst[ext=mp4]/worst"
+            if format_type == "webm":
+                return "worst[ext=webm]/worst"
+            else:
+                return "worst[ext=mp4]/worst"
         elif quality.endswith('p'):
             # Specific resolution
             height = quality[:-1]
-            return f"best[height<={height}][ext=mp4]/best[height<={height}]/best[ext=mp4]/best"
+            if format_type == "webm":
+                return f"best[height<={height}][ext=webm]/best[height<={height}]/best[ext=webm]/best"
+            else:
+                return f"best[height<={height}][ext=mp4]/best[height<={height}]/best[ext=mp4]/best"
         else:
-            return "best[ext=mp4]/best"
+            if format_type == "webm":
+                return "best[ext=webm]/best"
+            else:
+                return "best[ext=mp4]/best"
     
     def get_download_progress(self, download_id: str) -> Optional[DownloadProgress]:
         """Get current download progress"""
