@@ -435,17 +435,60 @@ const VideoDownloader = ({ onDownloadComplete }) => {
                   </div>
 
                   {/* Educational Purpose Confirmation */}
-                  <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl border border-green-200 dark:border-green-700">
+                  <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-green-900/30 to-emerald-900/30 rounded-xl border border-green-400/30 animate-neon-glow">
                     <input
                       type="checkbox"
                       id="educational"
                       checked={educationalConfirm}
                       onChange={(e) => setEducationalConfirm(e.target.checked)}
-                      className="w-5 h-5 rounded border-2 border-green-300 text-green-600 focus:ring-green-500"
+                      className="w-5 h-5 rounded border-2 border-green-400 text-green-500 focus:ring-green-400"
                     />
-                    <label htmlFor="educational" className="text-sm text-green-800 dark:text-green-300 cursor-pointer flex-1">
+                    <label htmlFor="educational" className="text-sm text-green-300 cursor-pointer flex-1">
                       ✅ I confirm this download is for educational purposes only and I respect the platform's terms of service
                     </label>
+                  </div>
+
+                  {/* Local Storage Option */}
+                  <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-cyan-900/30 to-blue-900/30 rounded-xl border border-cyan-400/30">
+                    <input
+                      type="checkbox"
+                      id="localStorage"
+                      checked={useLocalStorage}
+                      onChange={(e) => setUseLocalStorage(e.target.checked)}
+                      className="w-5 h-5 rounded border-2 border-cyan-400 text-cyan-500 focus:ring-cyan-400"
+                    />
+                    <label htmlFor="localStorage" className="text-sm text-cyan-300 cursor-pointer flex-1 flex items-center gap-2">
+                      <Save className="w-4 h-4" />
+                      Save to Local Storage (Browser Storage)
+                    </label>
+                  </div>
+
+                  {/* Sticker Section */}
+                  {selectedStickers.length > 0 && (
+                    <div className="p-4 bg-gradient-to-r from-purple-900/30 to-pink-900/30 rounded-xl border border-purple-400/30">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Sparkles className="w-4 h-4 text-purple-400" />
+                        <span className="text-sm text-purple-300">Selected Stickers:</span>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedStickers.map((sticker, index) => (
+                          <span key={index} className="px-2 py-1 bg-purple-400/20 rounded text-sm">
+                            {typeof sticker === 'string' ? sticker : '✨'}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => setShowStickerLibrary(true)}
+                      variant="outline"
+                      className="btn-neon"
+                    >
+                      <Smile className="w-4 h-4 mr-2" />
+                      Add Stickers
+                    </Button>
                   </div>
 
                   {/* Platform Support Grid */}
