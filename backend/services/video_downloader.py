@@ -209,78 +209,48 @@ class VideoDownloaderService:
                 'ratelimit': None,  # No rate limiting for max speed
             }
             
-            # Platform-specific configurations
-            if download_request.platform == PlatformType.INSTAGRAM:
+            # Platform-specific optimizations for speed
+            if download_request.platform == PlatformType.YOUTUBE:
                 ydl_opts.update({
-                    'cookiefile': None,  # Instagram may require cookies for some content
-                    'extractor_retries': 3,
+                    'format': 'best[ext=mp4]/best',  # Prefer mp4 for faster processing
                     'http_headers': {
-                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                    },
+                    'extractor_args': {
+                        'youtube': {
+                            'skip': ['hls', 'dash'],  # Skip slower streaming protocols
+                            'player_client': ['android', 'web']  # Use fastest clients
+                        }
+                    }
+                })
+            elif download_request.platform == PlatformType.INSTAGRAM:
+                ydl_opts.update({
+                    'cookiefile': None,
+                    'extractor_retries': 2,
+                    'http_headers': {
+                        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1'
                     }
                 })
             elif download_request.platform == PlatformType.FACEBOOK:
                 ydl_opts.update({
-                    'extractor_retries': 3,
+                    'extractor_retries': 2,
                     'http_headers': {
-                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
                     }
                 })
             elif download_request.platform == PlatformType.TIKTOK:
                 ydl_opts.update({
-                    'extractor_retries': 3,
+                    'extractor_retries': 2,
                     'http_headers': {
-                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                        'User-Agent': 'Mozilla/5.0 (Linux; Android 10; SM-G973F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36'
                     }
                 })
             
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                # Extract info first
-                info = ydl.extract_info(download_request.url, download=False)
-                
-                # Check if video is accessible
-                if info.get('availability') in ['private', 'premium_only', 'subscriber_only']:
-                    raise ValueError(f"Video is {info.get('availability')} and cannot be downloaded")
-                
-                # Create metadata
-                metadata = VideoMetadata(
-                    title=info.get('title', 'Unknown Title'),
-                    description=info.get('description', '')[:500] if info.get('description') else None,
-                    duration=info.get('duration'),
-                    thumbnail_url=info.get('thumbnail'),
-                    uploader=info.get('uploader') or info.get('channel'),
-                    upload_date=info.get('upload_date'),
-                    view_count=info.get('view_count'),
-                    platform=download_request.platform,
-                    format=download_request.format,
-                    file_size=str(info.get('filesize_approx', '')) if info.get('filesize_approx') is not None else None
-                )
-                
-                # Update download record with metadata
-                download_request.metadata = metadata
-                download_request.status = DownloadStatus.DOWNLOADING
-                
-                # Start actual download
-                ydl.download([download_request.url])
-                
-                # Find downloaded file
-                downloaded_files = list(download_dir.glob('*'))
-                if downloaded_files:
-                    main_file = max(downloaded_files, key=lambda f: f.stat().st_size)
-                    download_request.file_path = str(main_file)
-                    
-                    # Update file size with actual size
-                    actual_size = main_file.stat().st_size
-                    download_request.metadata.file_size = f"{actual_size / (1024*1024):.1f} MB"
-                
-                download_request.status = DownloadStatus.COMPLETED
-                download_request.completed_at = datetime.utcnow()
-                
-                # Update progress
-                if download_id in self.active_downloads:
-                    self.active_downloads[download_id].status = DownloadStatus.COMPLETED
-                    self.active_downloads[download_id].progress_percent = 100.0
-                
-                return download_request
+            # Run download in executor to avoid blocking
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(None, self._perform_download, ydl_opts, download_request)
+            
+            return download_request
                 
         except Exception as e:
             logger.error(f"Download failed for {download_id}: {str(e)}")
