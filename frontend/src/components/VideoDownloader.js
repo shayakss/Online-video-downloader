@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -6,14 +6,17 @@ import { Badge } from './ui/badge';
 import { Progress } from './ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { toast } from './ui/toast';
-import { Download, Link, Play, Pause, X, CheckCircle, AlertCircle, Clock } from 'lucide-react';
-import { detectPlatform, generateMockVideo, mockApiDelay } from '../data/mock';
+import { Download, Link, Play, Pause, X, CheckCircle, AlertCircle, Clock, ExternalLink } from 'lucide-react';
+import { videoApi, detectPlatform, formatDuration, formatDate } from '../services/api';
 
-const VideoDownloader = ({ videos, onAddVideo, onUpdateVideo, currentDownloads, setCurrentDownloads }) => {
+const VideoDownloader = ({ onDownloadComplete }) => {
   const [url, setUrl] = useState('');
   const [isValidating, setIsValidating] = useState(false);
   const [selectedQuality, setSelectedQuality] = useState('best');
   const [previewVideo, setPreviewVideo] = useState(null);
+  const [qualityOptions, setQualityOptions] = useState([]);
+  const [currentDownloads, setCurrentDownloads] = useState([]);
+  const [educationalConfirm, setEducationalConfirm] = useState(false);
 
   const platformColors = {
     youtube: 'bg-red-500',
@@ -27,6 +30,23 @@ const VideoDownloader = ({ videos, onAddVideo, onUpdateVideo, currentDownloads, 
     instagram: '📸',
     tiktok: '🎵',
     facebook: '👥'
+  };
+
+  // Load quality options when platform changes
+  useEffect(() => {
+    if (previewVideo?.platform) {
+      loadQualityOptions(previewVideo.platform);
+    }
+  }, [previewVideo?.platform]);
+
+  const loadQualityOptions = async (platform) => {
+    try {
+      const response = await videoApi.getQualityOptions(platform);
+      setQualityOptions(response.options || []);
+    } catch (error) {
+      console.error('Failed to load quality options:', error);
+      setQualityOptions([{ value: 'best', label: 'Best Available' }]);
+    }
   };
 
   const validateUrl = async () => {
@@ -52,80 +72,199 @@ const VideoDownloader = ({ videos, onAddVideo, onUpdateVideo, currentDownloads, 
     setIsValidating(true);
     
     try {
-      // Mock API call to validate URL
-      await mockApiDelay(1500, 3000);
+      const response = await videoApi.validateUrl(url);
       
-      const mockVideo = generateMockVideo(url, platform);
-      setPreviewVideo(mockVideo);
-      
-      toast({
-        title: "Video Found!",
-        description: `Ready to download from ${platform}`,
-      });
+      if (response.valid && response.video_info) {
+        setPreviewVideo({
+          ...response.video_info,
+          url: url,
+          platform: response.platform
+        });
+        
+        toast({
+          title: "Video Found!",
+          description: `Ready to download from ${response.platform}`,
+        });
+      }
     } catch (error) {
       toast({
         title: "Validation Failed",
-        description: "Could not fetch video information. Please check the URL.",
+        description: error.message,
         variant: "destructive"
       });
+      setPreviewVideo(null);
     } finally {
       setIsValidating(false);
     }
   };
 
   const startDownload = async () => {
-    if (!previewVideo) return;
+    if (!previewVideo || !educationalConfirm) {
+      toast({
+        title: "Requirements Not Met",
+        description: "Please validate a URL and confirm educational use",
+        variant: "destructive"
+      });
+      return;
+    }
 
-    const videoWithQuality = {
-      ...previewVideo,
-      selectedQuality,
-      status: 'downloading',
-      downloadProgress: 0
-    };
+    try {
+      const downloadRequest = {
+        url: url,
+        quality: selectedQuality,
+        format: 'mp4',
+        educational_purpose: educationalConfirm,
+        user_id: 'demo_user' // In a real app, get from auth context
+      };
 
-    onAddVideo(videoWithQuality);
-    setCurrentDownloads(prev => [...prev, videoWithQuality.id]);
-    setPreviewVideo(null);
-    setUrl('');
+      const response = await videoApi.startDownload(downloadRequest);
+      
+      const newDownload = {
+        id: response.download_id,
+        download_id: response.download_id,
+        url: url,
+        platform: response.platform,
+        status: 'pending',
+        progress_percent: 0,
+        title: previewVideo.title,
+        thumbnail_url: previewVideo.thumbnail_url,
+        uploader: previewVideo.uploader,
+        duration: previewVideo.duration
+      };
 
-    toast({
-      title: "Download Started",
-      description: `Downloading "${videoWithQuality.title}" in ${selectedQuality} quality`,
-    });
+      setCurrentDownloads(prev => [newDownload, ...prev]);
+      
+      // Start polling for progress
+      pollProgress(response.download_id);
+      
+      // Clear form
+      setPreviewVideo(null);
+      setUrl('');
+      setEducationalConfirm(false);
+      setSelectedQuality('best');
 
-    // Simulate download progress
-    let progress = 0;
-    const interval = setInterval(() => {
-      progress += Math.random() * 15 + 5;
-      if (progress >= 100) {
-        progress = 100;
-        clearInterval(interval);
-        onUpdateVideo(videoWithQuality.id, {
-          status: 'completed',
-          downloadProgress: 100,
-          downloadedAt: new Date().toISOString()
-        });
-        setCurrentDownloads(prev => prev.filter(id => id !== videoWithQuality.id));
-        
-        toast({
-          title: "Download Complete!",
-          description: `"${videoWithQuality.title}" has been downloaded successfully`,
-        });
-      } else {
-        onUpdateVideo(videoWithQuality.id, { downloadProgress: Math.floor(progress) });
-      }
-    }, 500);
+      toast({
+        title: "Download Started",
+        description: `Downloading "${previewVideo.title}"`,
+      });
+
+    } catch (error) {
+      toast({
+        title: "Download Failed",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
   };
 
-  const cancelDownload = (videoId) => {
-    onUpdateVideo(videoId, { status: 'cancelled', downloadProgress: 0 });
-    setCurrentDownloads(prev => prev.filter(id => id !== videoId));
-    
-    toast({
-      title: "Download Cancelled",
-      description: "Download has been stopped",
-      variant: "destructive"
-    });
+  const pollProgress = async (downloadId) => {
+    const pollInterval = setInterval(async () => {
+      try {
+        const progressData = await videoApi.getProgress(downloadId);
+        
+        setCurrentDownloads(prev => prev.map(download => 
+          download.download_id === downloadId 
+            ? { 
+                ...download, 
+                status: progressData.status,
+                progress_percent: progressData.progress_percent || 0,
+                speed: progressData.speed,
+                eta: progressData.eta,
+                error_message: progressData.error_message
+              }
+            : download
+        ));
+        
+        // Stop polling if completed or failed
+        if (progressData.status === 'completed' || progressData.status === 'failed') {
+          clearInterval(pollInterval);
+          
+          if (progressData.status === 'completed') {
+            // Load full metadata
+            try {
+              const metadata = await videoApi.getMetadata(downloadId);
+              setCurrentDownloads(prev => prev.map(download => 
+                download.download_id === downloadId 
+                  ? { ...download, metadata: metadata.metadata }
+                  : download
+              ));
+              
+              // Notify parent component
+              if (onDownloadComplete) {
+                onDownloadComplete(downloadId);
+              }
+              
+              toast({
+                title: "Download Complete!",
+                description: "Video has been downloaded successfully",
+              });
+            } catch (error) {
+              console.error('Failed to load metadata:', error);
+            }
+          } else if (progressData.status === 'failed') {
+            toast({
+              title: "Download Failed",
+              description: progressData.error_message || "Download failed",
+              variant: "destructive"
+            });
+          }
+        }
+        
+      } catch (error) {
+        console.error('Failed to get progress:', error);
+        clearInterval(pollInterval);
+      }
+    }, 2000);
+
+    // Cleanup interval after 10 minutes to prevent memory leaks
+    setTimeout(() => {
+      clearInterval(pollInterval);
+    }, 600000);
+  };
+
+  const cancelDownload = async (downloadId) => {
+    try {
+      await videoApi.cancelDownload(downloadId);
+      
+      setCurrentDownloads(prev => prev.map(download => 
+        download.download_id === downloadId 
+          ? { ...download, status: 'cancelled' }
+          : download
+      ));
+      
+      toast({
+        title: "Download Cancelled",
+        description: "Download has been stopped",
+        variant: "destructive"
+      });
+    } catch (error) {
+      toast({
+        title: "Cancel Failed",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
+
+  const downloadFile = async (downloadId) => {
+    try {
+      await videoApi.downloadFile(downloadId);
+      
+      toast({
+        title: "File Downloaded",
+        description: "Video file has been saved to your device",
+      });
+    } catch (error) {
+      toast({
+        title: "Download Failed",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
+
+  const removeFromList = (downloadId) => {
+    setCurrentDownloads(prev => prev.filter(d => d.download_id !== downloadId));
   };
 
   const getStatusIcon = (status) => {
@@ -133,12 +272,11 @@ const VideoDownloader = ({ videos, onAddVideo, onUpdateVideo, currentDownloads, 
       case 'completed': return <CheckCircle className="w-4 h-4 text-green-500" />;
       case 'downloading': return <Clock className="w-4 h-4 text-blue-500 animate-spin" />;
       case 'failed': return <AlertCircle className="w-4 h-4 text-red-500" />;
+      case 'cancelled': return <X className="w-4 h-4 text-gray-500" />;
       case 'pending': return <Clock className="w-4 h-4 text-gray-500" />;
       default: return null;
     }
   };
-
-  const activeDownloads = videos.filter(video => currentDownloads.includes(video.id));
 
   return (
     <div className="max-w-4xl mx-auto p-4 space-y-6">
@@ -181,6 +319,20 @@ const VideoDownloader = ({ videos, onAddVideo, onUpdateVideo, currentDownloads, 
             </Button>
           </div>
 
+          {/* Educational Purpose Confirmation */}
+          <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg border border-green-200">
+            <input
+              type="checkbox"
+              id="educational"
+              checked={educationalConfirm}
+              onChange={(e) => setEducationalConfirm(e.target.checked)}
+              className="w-4 h-4"
+            />
+            <label htmlFor="educational" className="text-sm text-green-800 cursor-pointer">
+              I confirm this download is for educational purposes only and I respect the platform's terms of service
+            </label>
+          </div>
+
           {/* Platform Support Indicators */}
           <div className="flex justify-center gap-4 mt-6">
             {Object.entries(platformIcons).map(([platform, icon]) => (
@@ -201,21 +353,42 @@ const VideoDownloader = ({ videos, onAddVideo, onUpdateVideo, currentDownloads, 
           </CardHeader>
           <CardContent>
             <div className="flex gap-4">
-              <img 
-                src={previewVideo.thumbnail} 
-                alt={previewVideo.title}
-                className="w-32 h-24 object-cover rounded-lg"
-              />
+              {previewVideo.thumbnail_url && (
+                <img 
+                  src={previewVideo.thumbnail_url} 
+                  alt={previewVideo.title}
+                  className="w-32 h-24 object-cover rounded-lg"
+                />
+              )}
               <div className="flex-1">
                 <h3 className="font-semibold text-lg">{previewVideo.title}</h3>
-                <p className="text-gray-600">{previewVideo.channel}</p>
+                {previewVideo.uploader && (
+                  <p className="text-gray-600">{previewVideo.uploader}</p>
+                )}
                 <div className="flex items-center gap-2 mt-2">
-                  <Badge className={platformColors[previewVideo.platform]}>
+                  <Badge className={platformColors[previewVideo.platform] + ' text-white'}>
                     {previewVideo.platform}
                   </Badge>
-                  <span className="text-sm text-gray-500">{previewVideo.duration}</span>
-                  <span className="text-sm text-gray-500">{previewVideo.fileSize}</span>
+                  {previewVideo.duration && (
+                    <span className="text-sm text-gray-500">
+                      {formatDuration(previewVideo.duration)}
+                    </span>
+                  )}
+                  {previewVideo.view_count && (
+                    <span className="text-sm text-gray-500">
+                      {previewVideo.view_count.toLocaleString()} views
+                    </span>
+                  )}
                 </div>
+                <a 
+                  href={url} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 text-sm mt-2"
+                >
+                  <ExternalLink className="w-3 h-3" />
+                  View Original
+                </a>
               </div>
             </div>
 
@@ -227,9 +400,11 @@ const VideoDownloader = ({ videos, onAddVideo, onUpdateVideo, currentDownloads, 
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="best">Best Available</SelectItem>
-                    {previewVideo.qualityOptions.map(quality => (
-                      <SelectItem key={quality} value={quality}>{quality}</SelectItem>
+                    {qualityOptions.map(option => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                        {option.resolution && ` (${option.resolution})`}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -237,6 +412,7 @@ const VideoDownloader = ({ videos, onAddVideo, onUpdateVideo, currentDownloads, 
               <div className="flex items-end">
                 <Button 
                   onClick={startDownload}
+                  disabled={!educationalConfirm}
                   className="bg-green-500 hover:bg-green-600"
                 >
                   <Download className="w-4 h-4 mr-2" />
@@ -249,78 +425,79 @@ const VideoDownloader = ({ videos, onAddVideo, onUpdateVideo, currentDownloads, 
       )}
 
       {/* Active Downloads */}
-      {activeDownloads.length > 0 && (
+      {currentDownloads.length > 0 && (
         <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Download className="w-5 h-5" />
-              Active Downloads ({activeDownloads.length})
+              Current Downloads ({currentDownloads.length})
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {activeDownloads.map(video => (
-              <div key={video.id} className="border rounded-lg p-4 bg-gray-50">
+            {currentDownloads.map(download => (
+              <div key={download.download_id} className="border rounded-lg p-4 bg-gray-50">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-3">
-                    {getStatusIcon(video.status)}
-                    <div>
-                      <h4 className="font-medium">{video.title}</h4>
-                      <p className="text-sm text-gray-600">{video.channel}</p>
+                    {getStatusIcon(download.status)}
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-medium truncate">{download.title || 'Loading...'}</h4>
+                      {download.uploader && (
+                        <p className="text-sm text-gray-600 truncate">{download.uploader}</p>
+                      )}
                     </div>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => cancelDownload(video.id)}
-                    className="text-red-500 hover:text-red-700"
-                  >
-                    <X className="w-4 h-4" />
-                  </Button>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Progress: {video.downloadProgress}%</span>
-                    <span>{video.fileSize}</span>
+                  <div className="flex items-center gap-2">
+                    {download.status === 'completed' && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => downloadFile(download.download_id)}
+                        className="text-green-600 hover:text-green-700"
+                      >
+                        <Download className="w-4 h-4" />
+                      </Button>
+                    )}
+                    {download.status === 'downloading' && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => cancelDownload(download.download_id)}
+                        className="text-red-500 hover:text-red-700"
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeFromList(download.download_id)}
+                      className="text-gray-500 hover:text-gray-700"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
                   </div>
-                  <Progress value={video.downloadProgress} className="h-2" />
                 </div>
+                
+                {download.status === 'downloading' && (
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>Progress: {Math.round(download.progress_percent || 0)}%</span>
+                      <div className="flex gap-2">
+                        {download.speed && <span>Speed: {download.speed}</span>}
+                        {download.eta && <span>ETA: {download.eta}</span>}
+                      </div>
+                    </div>
+                    <Progress value={download.progress_percent || 0} className="h-2" />
+                  </div>
+                )}
+                
+                {download.status === 'failed' && download.error_message && (
+                  <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
+                    Error: {download.error_message}
+                  </div>
+                )}
               </div>
             ))}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Recent Downloads */}
-      {videos.length > 0 && (
-        <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
-          <CardHeader>
-            <CardTitle>Recent Downloads</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-2">
-              {videos.slice(0, 4).map(video => (
-                <div key={video.id} className="flex gap-3 p-3 border rounded-lg bg-gray-50">
-                  <img 
-                    src={video.thumbnail} 
-                    alt={video.title}
-                    className="w-16 h-12 object-cover rounded"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-medium truncate">{video.title}</h4>
-                    <p className="text-sm text-gray-600 truncate">{video.channel}</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      {getStatusIcon(video.status)}
-                      <Badge 
-                        variant="outline" 
-                        className={`text-xs ${platformColors[video.platform]} text-white border-0`}
-                      >
-                        {video.platform}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
           </CardContent>
         </Card>
       )}
