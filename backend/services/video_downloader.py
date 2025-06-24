@@ -222,7 +222,7 @@ class VideoDownloaderService:
                     view_count=info.get('view_count'),
                     platform=download_request.platform,
                     format=download_request.format,
-                    file_size=info.get('filesize_approx')
+                    file_size=str(info.get('filesize_approx', '')) if info.get('filesize_approx') is not None else None
                 )
                 
                 # Update download record with metadata
