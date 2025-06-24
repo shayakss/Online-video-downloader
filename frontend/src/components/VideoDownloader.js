@@ -57,6 +57,11 @@ const VideoDownloader = ({ onDownloadComplete }) => {
   const [currentDownloads, setCurrentDownloads] = useState([]);
   const [educationalConfirm, setEducationalConfirm] = useState(false);
   const [activeTab, setActiveTab] = useState('single');
+  const [showStickerLibrary, setShowStickerLibrary] = useState(false);
+  const [selectedStickers, setSelectedStickers] = useState([]);
+  const [showMediaPlayer, setShowMediaPlayer] = useState(false);
+  const [currentMedia, setCurrentMedia] = useState(null);
+  const [useLocalStorage, setUseLocalStorage] = useState(true);
 
   const { toast } = useToast();
 
