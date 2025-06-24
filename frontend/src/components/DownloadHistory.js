@@ -4,7 +4,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Badge } from './ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { toast } from './ui/toast';
+import { useToast } from '../hooks/use-toast';
 import { 
   Search, 
   Filter, 
@@ -31,6 +31,8 @@ const DownloadHistory = ({ refreshTrigger }) => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [searchLoading, setSearchLoading] = useState(false);
+
+  const { toast } = useToast();
 
   const platformColors = {
     youtube: 'bg-red-500',
