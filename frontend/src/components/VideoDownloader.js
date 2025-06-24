@@ -66,17 +66,17 @@ const VideoDownloader = ({ onDownloadComplete }) => {
   const { toast } = useToast();
 
   const platformColors = {
-    youtube: 'from-red-500 to-red-600',
-    instagram: 'from-purple-500 to-pink-500',
-    tiktok: 'from-black to-gray-800',
-    facebook: 'from-blue-500 to-blue-600'
+    youtube: 'from-red-500 via-red-400 to-red-600',
+    instagram: 'from-purple-500 via-pink-500 to-orange-400',
+    tiktok: 'from-black via-gray-800 to-gray-900',
+    facebook: 'from-blue-500 via-blue-400 to-blue-600'
   };
 
-  const platformIcons = {
-    youtube: '🎬',
-    instagram: '📸',
-    tiktok: '🎵',
-    facebook: '👥'
+  const neonPlatformColors = {
+    youtube: 'text-red-400',
+    instagram: 'text-pink-400',
+    tiktok: 'text-purple-400',
+    facebook: 'text-blue-400'
   };
 
   // Load quality options when platform changes
