@@ -450,12 +450,18 @@ const VideoDownloader = ({ onDownloadComplete }) => {
 
                   {/* Platform Support Grid */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6">
-                    {Object.entries(platformIcons).map(([platform, icon]) => (
-                      <div key={platform} className="text-center p-4 rounded-xl glass-effect hover:scale-105 transition-all duration-300">
-                        <div className="text-3xl mb-2">{icon}</div>
-                        <span className="text-sm font-medium capitalize text-gray-700 dark:text-gray-300">{platform}</span>
-                        <div className="w-full h-1 bg-gray-200 dark:bg-gray-700 rounded-full mt-2">
-                          <div className={`h-full bg-gradient-to-r ${platformColors[platform]} rounded-full`}></div>
+                    {Object.keys(neonPlatformColors).map((platform) => (
+                      <div key={platform} className="text-center p-4 rounded-xl glass-effect hover:scale-105 transition-all duration-300 hover:shadow-neon-md">
+                        <div className="mb-3 flex justify-center">
+                          <NeonPlatformIcon 
+                            platform={platform} 
+                            size="w-8 h-8" 
+                            className={`${neonPlatformColors[platform]} animate-neon-pulse`} 
+                          />
+                        </div>
+                        <span className="text-sm font-medium capitalize neon-text">{platform}</span>
+                        <div className="w-full h-1 bg-gray-700 rounded-full mt-2">
+                          <div className={`h-full bg-gradient-to-r ${platformColors[platform]} rounded-full animate-neon-glow`}></div>
                         </div>
                       </div>
                     ))}
