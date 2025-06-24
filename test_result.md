@@ -164,6 +164,9 @@ backend:
         - working: true
           agent: "testing"
           comment: "Fixed the issue by converting the file_size to a string. The POST /api/download/start endpoint now successfully initiates downloads and returns a download_id."
+        - working: true
+          agent: "testing"
+          comment: "Verified that the download initiation endpoint is still working correctly after frontend fixes. Successfully initiates downloads and returns a download_id."
 
   - task: "Download Progress Tracking"
     implemented: true
