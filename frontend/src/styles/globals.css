@@ -195,29 +195,47 @@
   animation: cyberpunkFlicker 3s infinite;
 }
 
-/* Professional Button Styles */
+/* Neon Button Styles */
 .btn-primary {
-  @apply bg-gradient-to-r from-blue-500 to-purple-600 text-white;
-  @apply hover:from-blue-600 hover:to-purple-700 hover:scale-105;
-  @apply transition-all duration-300 shadow-lg hover:shadow-xl;
+  @apply bg-gradient-to-r from-cyan-500 to-blue-600 text-white;
+  @apply hover:from-cyan-400 hover:to-blue-500 hover:scale-105;
+  @apply transition-all duration-300 shadow-neon-lg hover:shadow-neon-xl;
+  box-shadow: var(--shadow-neon-lg);
 }
 
 .btn-secondary {
-  @apply bg-gradient-to-r from-gray-500 to-gray-600 text-white;
-  @apply hover:from-gray-600 hover:to-gray-700 hover:scale-105;
-  @apply transition-all duration-300 shadow-lg hover:shadow-xl;
+  @apply bg-gradient-to-r from-purple-500 to-pink-600 text-white;
+  @apply hover:from-purple-400 hover:to-pink-500 hover:scale-105;
+  @apply transition-all duration-300 shadow-neon-lg hover:shadow-neon-xl;
 }
 
 .btn-success {
-  @apply bg-gradient-to-r from-green-500 to-emerald-600 text-white;
-  @apply hover:from-green-600 hover:to-emerald-700 hover:scale-105;
-  @apply transition-all duration-300 shadow-lg hover:shadow-xl;
+  @apply bg-gradient-to-r from-green-400 to-cyan-500 text-black;
+  @apply hover:from-green-300 hover:to-cyan-400 hover:scale-105;
+  @apply transition-all duration-300 shadow-neon-lg hover:shadow-neon-xl;
+  color: #000000;
+  text-shadow: 0 0 10px rgba(0, 255, 65, 0.8);
 }
 
 .btn-danger {
   @apply bg-gradient-to-r from-red-500 to-pink-600 text-white;
-  @apply hover:from-red-600 hover:to-pink-700 hover:scale-105;
-  @apply transition-all duration-300 shadow-lg hover:shadow-xl;
+  @apply hover:from-red-400 hover:to-pink-500 hover:scale-105;
+  @apply transition-all duration-300 shadow-neon-lg hover:shadow-neon-xl;
+}
+
+.btn-neon {
+  background: transparent;
+  border: 2px solid var(--neon-primary);
+  color: var(--neon-primary);
+  text-shadow: var(--neon-glow-primary);
+  transition: all 0.3s ease;
+}
+
+.btn-neon:hover {
+  background: var(--neon-primary);
+  color: #000000;
+  box-shadow: var(--neon-glow-primary);
+  transform: scale(1.05);
 }
 
 /* Mobile-first Responsive Design */
