@@ -186,10 +186,12 @@ class VideoDownloaderService:
             
             # Optimized yt-dlp options for speed
             ydl_opts = {
-                'format': self._get_format_selector(download_request.quality, download_request.platform),
+                'format': self._get_format_selector(download_request.quality, download_request.platform, download_request.format),
                 'outtmpl': str(download_dir / '%(title)s.%(ext)s'),
                 'progress_hooks': [self.create_progress_hook(download_id)],
-                'extractaudio': False,
+                'extractaudio': download_request.format in ['mp3', 'm4a', 'wav'],
+                'audioformat': download_request.format if download_request.format in ['mp3', 'm4a', 'wav'] else None,
+                'audioquality': '0' if download_request.format in ['mp3', 'm4a', 'wav'] else None,  # Best audio quality
                 'embed_subs': False,
                 'writesubtitles': False,
                 'writeautomaticsub': False,
@@ -207,7 +209,16 @@ class VideoDownloaderService:
                 'socket_timeout': 30,
                 'keepvideo': False,
                 'ratelimit': None,  # No rate limiting for max speed
+                'postprocessors': []
             }
+            
+            # Add audio postprocessor for audio formats
+            if download_request.format in ['mp3', 'm4a', 'wav']:
+                ydl_opts['postprocessors'].append({
+                    'key': 'FFmpegExtractAudio',
+                    'preferredcodec': download_request.format,
+                    'preferredquality': '320' if download_request.format == 'mp3' else '0',
+                })
             
             # Platform-specific optimizations for speed
             if download_request.platform == PlatformType.YOUTUBE:
