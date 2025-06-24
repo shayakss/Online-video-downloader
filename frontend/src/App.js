@@ -6,23 +6,11 @@ import VideoDownloader from "./components/VideoDownloader";
 import DownloadHistory from "./components/DownloadHistory";
 import Settings from "./components/Settings";
 import Navigation from "./components/Navigation";
-import { mockVideos, mockDownloadStats } from "./data/mock";
 
 function App() {
-  const [videos, setVideos] = useState([]);
-  const [downloadStats, setDownloadStats] = useState(mockDownloadStats);
-  const [currentDownloads, setCurrentDownloads] = useState([]);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   useEffect(() => {
-    // Load mock data on app start
-    const savedVideos = localStorage.getItem('downloadedVideos');
-    if (savedVideos) {
-      setVideos(JSON.parse(savedVideos));
-    } else {
-      setVideos(mockVideos);
-      localStorage.setItem('downloadedVideos', JSON.stringify(mockVideos));
-    }
-
     // Register service worker for PWA
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js')
@@ -35,24 +23,9 @@ function App() {
     }
   }, []);
 
-  const addVideo = (video) => {
-    const updatedVideos = [video, ...videos];
-    setVideos(updatedVideos);
-    localStorage.setItem('downloadedVideos', JSON.stringify(updatedVideos));
-  };
-
-  const updateVideo = (videoId, updates) => {
-    const updatedVideos = videos.map(video => 
-      video.id === videoId ? { ...video, ...updates } : video
-    );
-    setVideos(updatedVideos);
-    localStorage.setItem('downloadedVideos', JSON.stringify(updatedVideos));
-  };
-
-  const deleteVideo = (videoId) => {
-    const updatedVideos = videos.filter(video => video.id !== videoId);
-    setVideos(updatedVideos);
-    localStorage.setItem('downloadedVideos', JSON.stringify(updatedVideos));
+  const handleDownloadComplete = (downloadId) => {
+    // Trigger refresh of download history
+    setRefreshTrigger(prev => prev + 1);
   };
 
   return (
@@ -64,11 +37,7 @@ function App() {
               path="/" 
               element={
                 <VideoDownloader 
-                  videos={videos}
-                  onAddVideo={addVideo}
-                  onUpdateVideo={updateVideo}
-                  currentDownloads={currentDownloads}
-                  setCurrentDownloads={setCurrentDownloads}
+                  onDownloadComplete={handleDownloadComplete}
                 />
               } 
             />
@@ -76,9 +45,7 @@ function App() {
               path="/history" 
               element={
                 <DownloadHistory 
-                  videos={videos}
-                  onDeleteVideo={deleteVideo}
-                  stats={downloadStats}
+                  refreshTrigger={refreshTrigger}
                 />
               } 
             />
@@ -91,5 +58,3 @@ function App() {
     </div>
   );
 }
-
-export default App;
