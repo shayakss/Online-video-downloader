@@ -32,7 +32,7 @@ function App() {
 
   return (
     <ThemeProvider>
-      <div className="App min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50">
+      <div className="App min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-black">
         <BrowserRouter>
           <div className="pb-20">
             <Routes>

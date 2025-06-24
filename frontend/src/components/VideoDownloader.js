@@ -31,7 +31,9 @@ import {
   Video,
   Save,
   FileDown,
-  Loader2
+  Loader2,
+  TrendingUp,
+  Activity
 } from 'lucide-react';
 import { videoApi, detectPlatform, formatDuration, formatDate } from '../services/api';
 import { ProfessionalHeader } from './ProfessionalHeader';
@@ -50,10 +52,11 @@ const VideoDownloader = ({ onDownloadComplete }) => {
   const [previewVideos, setPreviewVideos] = useState([]);
   const [qualityOptions, setQualityOptions] = useState([]);
   const [formatOptions] = useState([
-    { value: 'mp4', label: 'MP4 Video', icon: '🎬' },
-    { value: 'mp3', label: 'MP3 Audio', icon: '🎵' },
-    { value: 'webm', label: 'WebM Video', icon: '🎞️' },
-    { value: 'best', label: 'Best Quality', icon: '⭐' }
+    { value: 'mp4', label: 'MP4 Video', icon: '🎬', type: 'video' },
+    { value: 'mp3', label: 'MP3 Audio', icon: '🎵', type: 'audio' },
+    { value: 'webm', label: 'WebM Video', icon: '🎞️', type: 'video' },
+    { value: 'm4a', label: 'M4A Audio', icon: '🎶', type: 'audio' },
+    { value: 'wav', label: 'WAV Audio', icon: '🔊', type: 'audio' }
   ]);
   const [currentDownloads, setCurrentDownloads] = useState([]);
   const [activeTab, setActiveTab] = useState('single');
@@ -61,6 +64,12 @@ const VideoDownloader = ({ onDownloadComplete }) => {
   const [selectedStickers, setSelectedStickers] = useState([]);
   const [showMediaPlayer, setShowMediaPlayer] = useState(false);
   const [currentMedia, setCurrentMedia] = useState(null);
+  const [downloadStats, setDownloadStats] = useState({
+    totalDownloads: 0,
+    activeDownloads: 0,
+    completedToday: 0,
+    averageSpeed: '0 MB/s'
+  });
 
   const { toast } = useToast();
 
@@ -72,11 +81,28 @@ const VideoDownloader = ({ onDownloadComplete }) => {
   };
 
   const platformTextColors = {
-    youtube: 'text-red-600',
-    instagram: 'text-pink-600',
-    tiktok: 'text-gray-800',
-    facebook: 'text-blue-600'
+    youtube: 'text-red-400',
+    instagram: 'text-pink-400',
+    tiktok: 'text-gray-400',
+    facebook: 'text-blue-400'
   };
+
+  // Update stats when downloads change
+  useEffect(() => {
+    const activeCount = currentDownloads.filter(d => d.status === 'downloading').length;
+    const completedCount = currentDownloads.filter(d => d.status === 'completed').length;
+    const speeds = currentDownloads
+      .filter(d => d.speed && d.status === 'downloading')
+      .map(d => parseFloat(d.speed.split(' ')[0]) || 0);
+    const avgSpeed = speeds.length > 0 ? speeds.reduce((a, b) => a + b, 0) / speeds.length : 0;
+
+    setDownloadStats({
+      totalDownloads: currentDownloads.length,
+      activeDownloads: activeCount,
+      completedToday: completedCount,
+      averageSpeed: avgSpeed > 0 ? `${avgSpeed.toFixed(1)} MB/s` : '0 MB/s'
+    });
+  }, [currentDownloads]);
 
   // Load quality options when platform changes
   useEffect(() => {
@@ -256,6 +282,10 @@ const VideoDownloader = ({ onDownloadComplete }) => {
               });
             } catch (error) {
               console.error('Failed to download file:', error);
+              toast({
+                title: "Download Complete",
+                description: "File ready for manual download",
+              });
             }
           } else if (progressData.status === 'failed') {
             toast({
@@ -281,10 +311,15 @@ const VideoDownloader = ({ onDownloadComplete }) => {
   const downloadFileDirectly = async (downloadId) => {
     try {
       // Create a temporary link to trigger download
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/download/file/${downloadId}`);
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/download/file/${downloadId}`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/octet-stream'
+        }
+      });
       
       if (!response.ok) {
-        throw new Error('Failed to download file');
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const blob = await response.blob();
@@ -292,12 +327,21 @@ const VideoDownloader = ({ onDownloadComplete }) => {
       
       // Get filename from response headers or use default
       const contentDisposition = response.headers.get('content-disposition');
-      let filename = `video_${downloadId}.mp4`;
+      let filename = `video_${downloadId}`;
       
       if (contentDisposition) {
-        const matches = /filename="([^"]*)"/.exec(contentDisposition);
+        const matches = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(contentDisposition);
         if (matches != null && matches[1]) {
-          filename = matches[1];
+          filename = matches[1].replace(/['"]/g, '');
+        }
+      }
+
+      // Add extension based on format
+      const download = currentDownloads.find(d => d.download_id === downloadId);
+      if (download && download.format) {
+        const ext = download.format.toLowerCase();
+        if (!filename.includes('.')) {
+          filename += `.${ext}`;
         }
       }
 
@@ -305,6 +349,7 @@ const VideoDownloader = ({ onDownloadComplete }) => {
       const link = document.createElement('a');
       link.href = url;
       link.download = filename;
+      link.style.display = 'none';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -373,7 +418,7 @@ const VideoDownloader = ({ onDownloadComplete }) => {
     if (download) {
       setCurrentMedia({
         url: "placeholder.mp4", // Placeholder for demo
-        type: 'video',
+        type: download.format === 'mp3' || download.format === 'm4a' || download.format === 'wav' ? 'audio' : 'video',
         title: download.title || 'Downloaded Media'
       });
       setShowMediaPlayer(true);
@@ -386,11 +431,11 @@ const VideoDownloader = ({ onDownloadComplete }) => {
 
   const getStatusIcon = (status) => {
     switch (status) {
-      case 'completed': return <CheckCircle className="w-4 h-4 text-green-500" />;
-      case 'downloading': return <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />;
-      case 'failed': return <AlertCircle className="w-4 h-4 text-red-500" />;
-      case 'cancelled': return <X className="w-4 h-4 text-gray-500" />;
-      case 'pending': return <Clock className="w-4 h-4 text-gray-500" />;
+      case 'completed': return <CheckCircle className="w-4 h-4 text-green-400" />;
+      case 'downloading': return <Loader2 className="w-4 h-4 text-blue-400 animate-spin" />;
+      case 'failed': return <AlertCircle className="w-4 h-4 text-red-400" />;
+      case 'cancelled': return <X className="w-4 h-4 text-gray-400" />;
+      case 'pending': return <Clock className="w-4 h-4 text-yellow-400" />;
       default: return null;
     }
   };
@@ -402,19 +447,72 @@ const VideoDownloader = ({ onDownloadComplete }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-black text-white">
       {/* Professional Header */}
       <ProfessionalHeader />
+      
+      {/* Stats Dashboard */}
+      <div className="container mx-auto px-4 py-6 max-w-7xl">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700 rounded-xl p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-400 text-xs uppercase tracking-wide">Total Downloads</p>
+                <p className="text-2xl font-bold text-white">{downloadStats.totalDownloads}</p>
+              </div>
+              <div className="p-2 bg-blue-500/20 rounded-lg">
+                <Download className="w-5 h-5 text-blue-400" />
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700 rounded-xl p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-400 text-xs uppercase tracking-wide">Active</p>
+                <p className="text-2xl font-bold text-white">{downloadStats.activeDownloads}</p>
+              </div>
+              <div className="p-2 bg-green-500/20 rounded-lg">
+                <Activity className="w-5 h-5 text-green-400" />
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700 rounded-xl p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-400 text-xs uppercase tracking-wide">Completed</p>
+                <p className="text-2xl font-bold text-white">{downloadStats.completedToday}</p>
+              </div>
+              <div className="p-2 bg-purple-500/20 rounded-lg">
+                <CheckCircle className="w-5 h-5 text-purple-400" />
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700 rounded-xl p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-400 text-xs uppercase tracking-wide">Avg Speed</p>
+                <p className="text-2xl font-bold text-white">{downloadStats.averageSpeed}</p>
+              </div>
+              <div className="p-2 bg-yellow-500/20 rounded-lg">
+                <TrendingUp className="w-5 h-5 text-yellow-400" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
       
       <div className="container mx-auto px-4 py-8 max-w-6xl space-y-8">
         {/* Main Download Interface */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 lg:w-[400px] mx-auto bg-white shadow-lg mb-8">
-            <TabsTrigger value="single" className="flex items-center gap-2">
+          <TabsList className="grid w-full grid-cols-2 lg:w-[400px] mx-auto bg-gray-800/50 border border-gray-700 mb-8">
+            <TabsTrigger value="single" className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white">
               <Download className="w-4 h-4" />
               Single Download
             </TabsTrigger>
-            <TabsTrigger value="batch" className="flex items-center gap-2">
+            <TabsTrigger value="batch" className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white">
               <Users className="w-4 h-4" />
               Batch Processing
             </TabsTrigger>
@@ -423,13 +521,13 @@ const VideoDownloader = ({ onDownloadComplete }) => {
           {/* Single Download Tab */}
           <TabsContent value="single" className="space-y-6">
             {/* URL Input Section */}
-            <Card className="bg-white/80 backdrop-blur-sm shadow-xl border-0 border border-blue-200/50">
+            <Card className="bg-gray-800/50 backdrop-blur-sm border border-gray-700">
               <CardHeader>
-                <CardTitle className="flex items-center gap-3">
+                <CardTitle className="flex items-center gap-3 text-white">
                   <div className="p-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl">
                     <Link className="w-5 h-5 text-white" />
                   </div>
-                  <span className="text-gray-800">Smart URL Analyzer</span>
+                  <span>Smart URL Analyzer</span>
                   <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white border-0">
                     AI Powered
                   </Badge>
@@ -442,7 +540,7 @@ const VideoDownloader = ({ onDownloadComplete }) => {
                       placeholder="🔗 Paste your video URL here (YouTube, Instagram, TikTok, Facebook)..."
                       value={url}
                       onChange={(e) => setUrl(e.target.value)}
-                      className="flex-1 text-lg py-4 border-2 border-gray-200 focus:border-blue-500 rounded-xl"
+                      className="flex-1 text-lg py-4 bg-gray-900/50 border-gray-600 text-white placeholder-gray-400 focus:border-blue-500 rounded-xl"
                       onKeyPress={(e) => e.key === 'Enter' && validateUrl()}
                     />
                     <Button 
@@ -462,14 +560,14 @@ const VideoDownloader = ({ onDownloadComplete }) => {
 
                   {/* Sticker Section */}
                   {selectedStickers.length > 0 && (
-                    <div className="p-4 bg-gradient-to-r from-purple-100 to-pink-100 rounded-xl border border-purple-200">
+                    <div className="p-4 bg-purple-900/30 rounded-xl border border-purple-500/30">
                       <div className="flex items-center gap-2 mb-2">
-                        <Sparkles className="w-4 h-4 text-purple-600" />
-                        <span className="text-sm text-purple-700">Selected Stickers:</span>
+                        <Sparkles className="w-4 h-4 text-purple-400" />
+                        <span className="text-sm text-purple-300">Selected Stickers:</span>
                       </div>
                       <div className="flex flex-wrap gap-2">
                         {selectedStickers.map((sticker, index) => (
-                          <span key={index} className="px-2 py-1 bg-purple-200 rounded text-sm">
+                          <span key={index} className="px-2 py-1 bg-purple-600/30 rounded text-sm text-purple-200">
                             {typeof sticker === 'string' ? sticker : '✨'}
                           </span>
                         ))}
@@ -481,7 +579,7 @@ const VideoDownloader = ({ onDownloadComplete }) => {
                     <Button
                       onClick={() => setShowStickerLibrary(true)}
                       variant="outline"
-                      className="border-2 border-purple-200 hover:bg-purple-50"
+                      className="border-purple-500/50 hover:bg-purple-500/10 text-purple-300"
                     >
                       <Smile className="w-4 h-4 mr-2" />
                       Add Stickers
@@ -491,7 +589,7 @@ const VideoDownloader = ({ onDownloadComplete }) => {
                   {/* Platform Support Grid */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6">
                     {Object.keys(platformColors).map((platform) => (
-                      <div key={platform} className="text-center p-4 rounded-xl bg-white shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105">
+                      <div key={platform} className="text-center p-4 rounded-xl bg-gray-800/30 border border-gray-700 hover:border-gray-600 transition-all duration-300 hover:scale-105">
                         <div className="mb-3 flex justify-center">
                           <NeonPlatformIcon 
                             platform={platform} 
@@ -499,8 +597,8 @@ const VideoDownloader = ({ onDownloadComplete }) => {
                             className={`${platformTextColors[platform]}`} 
                           />
                         </div>
-                        <span className="text-sm font-medium capitalize text-gray-700">{platform}</span>
-                        <div className="w-full h-2 bg-gray-200 rounded-full mt-2">
+                        <span className="text-sm font-medium capitalize text-gray-300">{platform}</span>
+                        <div className="w-full h-2 bg-gray-700 rounded-full mt-2">
                           <div className={`h-full bg-gradient-to-r ${platformColors[platform]} rounded-full`}></div>
                         </div>
                       </div>
@@ -519,9 +617,9 @@ const VideoDownloader = ({ onDownloadComplete }) => {
                 />
 
                 {/* Download Options */}
-                <Card className="bg-white/80 backdrop-blur-sm shadow-xl border-0">
+                <Card className="bg-gray-800/50 backdrop-blur-sm border border-gray-700">
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
+                    <CardTitle className="flex items-center gap-2 text-white">
                       <Settings className="w-5 h-5" />
                       Download Configuration
                     </CardTitle>
@@ -530,20 +628,20 @@ const VideoDownloader = ({ onDownloadComplete }) => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {/* Quality Selection */}
                       <div className="space-y-2">
-                        <label className="block text-sm font-medium text-gray-700">
+                        <label className="block text-sm font-medium text-gray-300">
                           Quality
                         </label>
                         <Select value={selectedQuality} onValueChange={setSelectedQuality}>
-                          <SelectTrigger className="border-2 border-gray-200 focus:border-blue-500">
+                          <SelectTrigger className="bg-gray-900/50 border-gray-600 text-white">
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent className="bg-white shadow-xl">
+                          <SelectContent className="bg-gray-800 border-gray-600">
                             {qualityOptions.map(option => (
-                              <SelectItem key={option.value} value={option.value}>
+                              <SelectItem key={option.value} value={option.value} className="text-white hover:bg-gray-700">
                                 <div className="flex items-center gap-2">
                                   ⭐ {option.label}
                                   {option.resolution && (
-                                    <Badge variant="outline" className="text-xs">
+                                    <Badge variant="outline" className="text-xs border-gray-500 text-gray-300">
                                       {option.resolution}
                                     </Badge>
                                   )}
@@ -556,18 +654,21 @@ const VideoDownloader = ({ onDownloadComplete }) => {
 
                       {/* Format Selection */}
                       <div className="space-y-2">
-                        <label className="block text-sm font-medium text-gray-700">
+                        <label className="block text-sm font-medium text-gray-300">
                           Format
                         </label>
                         <Select value={selectedFormat} onValueChange={setSelectedFormat}>
-                          <SelectTrigger className="border-2 border-gray-200 focus:border-blue-500">
+                          <SelectTrigger className="bg-gray-900/50 border-gray-600 text-white">
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent className="bg-white shadow-xl">
+                          <SelectContent className="bg-gray-800 border-gray-600">
                             {formatOptions.map(format => (
-                              <SelectItem key={format.value} value={format.value}>
+                              <SelectItem key={format.value} value={format.value} className="text-white hover:bg-gray-700">
                                 <div className="flex items-center gap-2">
                                   {format.icon} {format.label}
+                                  <Badge variant="outline" className="text-xs border-gray-500 text-gray-300">
+                                    {format.type}
+                                  </Badge>
                                 </div>
                               </SelectItem>
                             ))}
@@ -588,7 +689,7 @@ const VideoDownloader = ({ onDownloadComplete }) => {
                       <Button 
                         variant="outline"
                         onClick={() => window.open(previewVideos[0]?.url, '_blank')}
-                        className="border-2 border-gray-200 hover:bg-gray-50 px-6"
+                        className="border-gray-600 hover:bg-gray-700 text-gray-300 px-6"
                       >
                         <ExternalLink className="w-4 h-4" />
                       </Button>
@@ -607,15 +708,15 @@ const VideoDownloader = ({ onDownloadComplete }) => {
 
         {/* Active Downloads */}
         {currentDownloads.length > 0 && (
-          <Card className="bg-white/80 backdrop-blur-sm shadow-xl border-0">
+          <Card className="bg-gray-800/50 backdrop-blur-sm border border-gray-700">
             <CardHeader>
-              <CardTitle className="flex items-center justify-between">
+              <CardTitle className="flex items-center justify-between text-white">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-gradient-to-r from-orange-500 to-red-500 rounded-xl">
                     <BarChart3 className="w-5 h-5 text-white" />
                   </div>
                   Download Queue ({currentDownloads.length})
-                  <Badge className="bg-blue-100 text-blue-800 border-blue-200">
+                  <Badge className="bg-blue-600 text-white border-0">
                     Live Updates
                   </Badge>
                 </div>
@@ -623,7 +724,7 @@ const VideoDownloader = ({ onDownloadComplete }) => {
                   variant="outline" 
                   size="sm"
                   onClick={() => setCurrentDownloads([])}
-                  className="text-gray-500 hover:text-gray-700"
+                  className="text-gray-400 hover:text-gray-200 border-gray-600"
                 >
                   Clear All
                 </Button>
@@ -631,15 +732,15 @@ const VideoDownloader = ({ onDownloadComplete }) => {
             </CardHeader>
             <CardContent className="space-y-4">
               {currentDownloads.map(download => (
-                <div key={download.download_id} className="p-4 rounded-xl bg-white shadow-md border border-gray-100 hover:shadow-lg transition-all duration-300">
+                <div key={download.download_id} className="p-4 rounded-xl bg-gray-900/50 border border-gray-700 hover:border-gray-600 transition-all duration-300">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                       {getStatusIcon(download.status)}
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-medium truncate text-gray-900">
+                        <h4 className="font-medium truncate text-white">
                           {download.title || 'Loading...'}
                         </h4>
-                        <div className="flex items-center gap-2 text-sm text-gray-500">
+                        <div className="flex items-center gap-2 text-sm text-gray-400">
                           {download.uploader && (
                             <span className="truncate">{download.uploader}</span>
                           )}
@@ -647,7 +748,7 @@ const VideoDownloader = ({ onDownloadComplete }) => {
                             {download.platform}
                           </Badge>
                           {download.format && (
-                            <Badge variant="outline" size="sm">
+                            <Badge variant="outline" size="sm" className="border-gray-600 text-gray-300">
                               {download.format.toUpperCase()}
                             </Badge>
                           )}
@@ -662,15 +763,19 @@ const VideoDownloader = ({ onDownloadComplete }) => {
                             variant="outline"
                             size="sm"
                             onClick={() => playMedia(download.download_id)}
-                            className="text-purple-600 hover:text-purple-700 border-purple-200"
+                            className="text-purple-400 hover:text-purple-300 border-purple-500/50 hover:bg-purple-500/10"
                           >
-                            <Video className="w-4 h-4" />
+                            {download.format === 'mp3' || download.format === 'm4a' || download.format === 'wav' ? (
+                              <Music className="w-4 h-4" />
+                            ) : (
+                              <Video className="w-4 h-4" />
+                            )}
                           </Button>
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => downloadFile(download.download_id)}
-                            className="text-green-600 hover:text-green-700 border-green-200"
+                            className="text-green-400 hover:text-green-300 border-green-500/50 hover:bg-green-500/10"
                           >
                             <FileDown className="w-4 h-4" />
                           </Button>
@@ -681,7 +786,7 @@ const VideoDownloader = ({ onDownloadComplete }) => {
                           variant="outline"
                           size="sm"
                           onClick={() => cancelDownload(download.download_id)}
-                          className="text-red-500 hover:text-red-700"
+                          className="text-red-400 hover:text-red-300 border-red-500/50"
                         >
                           <X className="w-4 h-4" />
                         </Button>
@@ -690,7 +795,7 @@ const VideoDownloader = ({ onDownloadComplete }) => {
                         variant="ghost"
                         size="sm"
                         onClick={() => removeFromList(download.download_id)}
-                        className="text-gray-400 hover:text-gray-600"
+                        className="text-gray-400 hover:text-gray-200"
                       >
                         <X className="w-4 h-4" />
                       </Button>
@@ -700,14 +805,14 @@ const VideoDownloader = ({ onDownloadComplete }) => {
                   {download.status === 'downloading' && (
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
-                        <span className="font-medium">Progress: {Math.round(download.progress_percent || 0)}%</span>
+                        <span className="font-medium text-gray-300">Progress: {Math.round(download.progress_percent || 0)}%</span>
                         <div className="flex gap-3 text-xs text-gray-500">
                           {download.speed && <span>📡 {download.speed}</span>}
                           {download.eta && <span>⏱️ {download.eta}</span>}
                         </div>
                       </div>
                       <div className="relative">
-                        <Progress value={download.progress_percent || 0} className="h-3" />
+                        <Progress value={download.progress_percent || 0} className="h-3 bg-gray-700" />
                         <div 
                           className={`absolute top-0 left-0 h-3 rounded-full transition-all duration-300 ${getProgressColor(download.progress_percent || 0)}`}
                           style={{ width: `${download.progress_percent || 0}%` }}
@@ -717,8 +822,8 @@ const VideoDownloader = ({ onDownloadComplete }) => {
                   )}
                   
                   {download.status === 'failed' && download.error_message && (
-                    <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
-                      <div className="flex items-center gap-2 text-red-700 text-sm">
+                    <div className="mt-3 p-3 bg-red-900/30 border border-red-500/30 rounded-lg">
+                      <div className="flex items-center gap-2 text-red-300 text-sm">
                         <AlertCircle className="w-4 h-4" />
                         Error: {download.error_message}
                       </div>
