@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
 import "./App.css";
+import "./styles/globals.css";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Toaster } from "./components/ui/toaster";
+import { ThemeProvider } from "./contexts/ThemeContext";
 import VideoDownloader from "./components/VideoDownloader";
 import DownloadHistory from "./components/DownloadHistory";
 import Settings from "./components/Settings";
@@ -29,33 +31,35 @@ function App() {
   };
 
   return (
-    <div className="App min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-cyan-50">
-      <BrowserRouter>
-        <div className="pb-20">
-          <Routes>
-            <Route 
-              path="/" 
-              element={
-                <VideoDownloader 
-                  onDownloadComplete={handleDownloadComplete}
-                />
-              } 
-            />
-            <Route 
-              path="/history" 
-              element={
-                <DownloadHistory 
-                  refreshTrigger={refreshTrigger}
-                />
-              } 
-            />
-            <Route path="/settings" element={<Settings />} />
-          </Routes>
-        </div>
-        <Navigation />
-        <Toaster />
-      </BrowserRouter>
-    </div>
+    <ThemeProvider>
+      <div className="App min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-cyan-50 dark:from-gray-900 dark:via-blue-900 dark:to-purple-900 transition-all duration-500">
+        <BrowserRouter>
+          <div className="pb-20">
+            <Routes>
+              <Route 
+                path="/" 
+                element={
+                  <VideoDownloader 
+                    onDownloadComplete={handleDownloadComplete}
+                  />
+                } 
+              />
+              <Route 
+                path="/history" 
+                element={
+                  <DownloadHistory 
+                    refreshTrigger={refreshTrigger}
+                  />
+                } 
+              />
+              <Route path="/settings" element={<Settings />} />
+            </Routes>
+          </div>
+          <Navigation />
+          <Toaster />
+        </BrowserRouter>
+      </div>
+    </ThemeProvider>
   );
 }
 
