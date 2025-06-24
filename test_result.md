@@ -131,6 +131,9 @@ backend:
         - working: true
           agent: "testing"
           comment: "The POST /api/video/validate endpoint successfully validates YouTube URLs and extracts video information. Invalid URLs are properly rejected with 400 status code."
+        - working: true
+          agent: "testing"
+          comment: "Verified that the video URL validation endpoint is still working correctly after frontend fixes. Successfully validates YouTube URLs and extracts video information."
 
   - task: "Quality Options Retrieval"
     implemented: true
