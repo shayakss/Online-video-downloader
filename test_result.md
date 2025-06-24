@@ -102,7 +102,7 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "Test the video downloader backend API that I just built. This is a video downloader service for educational purposes that supports YouTube, Instagram, TikTok, and Facebook."
+user_problem_statement: "Optimize the downloading performance (takes too much time in local storage), make it like SnaptTube/VidMate/Y2Mate, improve UI of history and settings sections, change name from 'Neon Downloader' to 'Online Video Downloader', and remove Cyberpunk branding and educational disclaimers."
 
 backend:
   - task: "API Health Check"
