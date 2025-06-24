@@ -19,7 +19,7 @@ const StickerLibrary = ({ onStickerSelect, isVisible, onClose }) => {
         { type: 'icon', component: Star, color: 'text-yellow-400', label: 'Star' },
         { type: 'icon', component: Heart, color: 'text-pink-400', label: 'Heart' },
         { type: 'icon', component: ThumbsUp, color: 'text-green-400', label: 'Like' },
-        { type: 'icon', component: Fire, color: 'text-red-400', label: 'Fire' },
+        { type: 'icon', component: Flame, color: 'text-red-400', label: 'Fire' },
         { type: 'icon', component: Zap, color: 'text-purple-400', label: 'Zap' }
       ]
     },
