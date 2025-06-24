@@ -47,27 +47,45 @@
   --transition-slow: 0.5s ease-in-out;
 }
 
-/* Professional Glassmorphism Classes */
+/* Neon Glassmorphism Classes */
 .glass-effect {
-  background: var(--glass-bg);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid var(--glass-border);
-  box-shadow: var(--glass-shadow);
+  background: rgba(0, 255, 255, 0.1);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  border: 1px solid rgba(0, 255, 255, 0.2);
+  box-shadow: var(--shadow-neon-md);
 }
 
 .glass-card {
   @apply glass-effect rounded-2xl;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(0, 255, 255, 0.3);
 }
 
 .glass-button {
   @apply glass-effect rounded-xl px-6 py-3 font-medium transition-all duration-300;
-  @apply hover:scale-105 hover:shadow-xl;
+  @apply hover:scale-105 hover:shadow-neon-lg;
+}
+
+/* Neon Glow Text */
+.neon-text {
+  color: var(--neon-primary);
+  text-shadow: var(--neon-glow-primary);
+}
+
+.neon-text-secondary {
+  color: var(--neon-secondary);
+  text-shadow: var(--neon-glow-secondary);
+}
+
+.neon-text-accent {
+  color: var(--neon-accent);
+  text-shadow: var(--neon-glow-accent);
 }
 
 /* Gradient Text */
 .gradient-text {
-  background: var(--gradient-primary);
+  background: var(--gradient-neon-primary);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
