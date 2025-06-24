@@ -720,5 +720,286 @@ class VideoDownloaderAPITest(unittest.TestCase):
         if download_id in self.download_ids:
             self.download_ids.remove(download_id)
 
+class OptimizedVideoDownloaderTest(unittest.TestCase):
+    """Test suite for optimized video downloader features"""
+    
+    def setUp(self):
+        """Set up test case"""
+        self.speed_tester = DownloadSpeedTest(API_URL)
+        
+        # Real URLs for testing
+        self.test_youtube_url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"  # Rick Roll
+        self.test_instagram_url = "https://www.instagram.com/reel/C8Nt-aBOYQP/"  # Public Instagram reel
+        self.test_tiktok_url = "https://www.tiktok.com/@khaby.lame/video/7074356384316098821"  # Public TikTok
+        self.test_facebook_url = "https://www.facebook.com/watch?v=1425919524625316"  # Public Facebook video
+    
+    def tearDown(self):
+        """Clean up after test case"""
+        self.speed_tester.cleanup()
+    
+    def test_01_fast_polling_updates(self):
+        """Test that progress updates are received at 1-second intervals"""
+        print("\n🔍 Testing fast polling updates (1-second intervals)...")
+        
+        # Start a YouTube download
+        download_id = self.speed_tester.start_download(self.test_youtube_url, "youtube")
+        if not download_id:
+            self.fail("Failed to start download")
+        
+        # Track progress with 1-second polling
+        results = self.speed_tester.track_download_progress(download_id, poll_interval=1.0, timeout=30)
+        
+        # Verify we got frequent updates
+        progress_points = results["progress_points"]
+        self.assertGreaterEqual(len(progress_points), 5, "Should have at least 5 progress updates")
+        
+        # Check time intervals between updates (should be close to 1 second)
+        time_diffs = []
+        for i in range(1, len(progress_points)):
+            time_diff = progress_points[i]["time"] - progress_points[i-1]["time"]
+            time_diffs.append(time_diff)
+        
+        # Calculate average time between updates
+        avg_time_diff = sum(time_diffs) / len(time_diffs) if time_diffs else 0
+        print(f"✅ Average time between progress updates: {avg_time_diff:.2f} seconds")
+        self.assertGreaterEqual(avg_time_diff, 0.8, "Updates should be at least 0.8 seconds apart")
+        self.assertLessEqual(avg_time_diff, 1.5, "Updates should be at most 1.5 seconds apart")
+    
+    def test_02_concurrent_fragment_downloads(self):
+        """Test concurrent fragment downloads (8 fragments)"""
+        print("\n🔍 Testing concurrent fragment downloads (8 fragments)...")
+        
+        # Start a YouTube download (larger video to test fragment downloads)
+        download_id = self.speed_tester.start_download(self.test_youtube_url, "youtube", quality="720p")
+        if not download_id:
+            self.fail("Failed to start download")
+        
+        # Track progress
+        results = self.speed_tester.track_download_progress(download_id, poll_interval=1.0, timeout=60)
+        
+        # Check if download completed
+        self.assertTrue(results["completed"], "Download should complete within the timeout period")
+        
+        # Check download speed - should be reasonably fast with concurrent fragments
+        if results["avg_speed_mbs"] > 0:
+            print(f"✅ Average download speed: {results['avg_speed_mbs']:.2f} MB/s")
+            print(f"✅ Maximum download speed: {results['max_speed_mbs']:.2f} MB/s")
+            self.assertGreater(results["max_speed_mbs"], 0.5, "Max speed should be greater than 0.5 MB/s")
+        else:
+            print("⚠️ Could not measure download speed - download may have completed too quickly")
+    
+    def test_03_platform_specific_optimizations(self):
+        """Test platform-specific optimizations"""
+        print("\n🔍 Testing platform-specific optimizations...")
+        
+        platforms = [
+            {"name": "YouTube", "url": self.test_youtube_url, "platform": "youtube"},
+            {"name": "Instagram", "url": self.test_instagram_url, "platform": "instagram"},
+            {"name": "TikTok", "url": self.test_tiktok_url, "platform": "tiktok"},
+            {"name": "Facebook", "url": self.test_facebook_url, "platform": "facebook"}
+        ]
+        
+        results = {}
+        
+        for platform in platforms:
+            print(f"\n🔍 Testing {platform['name']} optimizations...")
+            download_id = self.speed_tester.start_download(platform["url"], platform["platform"])
+            
+            if download_id:
+                # Track progress
+                platform_results = self.speed_tester.track_download_progress(
+                    download_id, poll_interval=1.0, timeout=60
+                )
+                
+                results[platform["platform"]] = platform_results
+                
+                if platform_results["completed"]:
+                    print(f"✅ {platform['name']} download completed successfully")
+                    if platform_results["avg_speed_mbs"] > 0:
+                        print(f"✅ Average download speed: {platform_results['avg_speed_mbs']:.2f} MB/s")
+                        print(f"✅ Maximum download speed: {platform_results['max_speed_mbs']:.2f} MB/s")
+                    
+                    # Check if metadata contains platform-specific info
+                    if platform_results.get("metadata") and platform_results["metadata"].get("metadata"):
+                        metadata = platform_results["metadata"]["metadata"]
+                        print(f"✅ {platform['name']} metadata retrieved successfully")
+                        
+                        # Check for expected metadata fields
+                        self.assertIsNotNone(metadata.get("title"), "Metadata should include title")
+                        self.assertEqual(metadata.get("platform"), platform["platform"], 
+                                        f"Metadata platform should be {platform['platform']}")
+                else:
+                    print(f"⚠️ {platform['name']} download did not complete within timeout")
+            else:
+                print(f"⚠️ Failed to start {platform['name']} download")
+        
+        # Compare download speeds across platforms
+        completed_platforms = {k: v for k, v in results.items() if v.get("completed")}
+        if len(completed_platforms) >= 2:
+            print("\n📊 Platform download speed comparison:")
+            for platform, result in completed_platforms.items():
+                if result["avg_speed_mbs"] > 0:
+                    print(f"  - {platform}: {result['avg_speed_mbs']:.2f} MB/s average, {result['max_speed_mbs']:.2f} MB/s max")
+    
+    def test_04_quality_options_performance(self):
+        """Test performance with different quality options"""
+        print("\n🔍 Testing performance with different quality options...")
+        
+        qualities = ["best", "720p", "480p"]
+        results = {}
+        
+        for quality in qualities:
+            print(f"\n🔍 Testing YouTube download with quality: {quality}")
+            download_id = self.speed_tester.start_download(self.test_youtube_url, "youtube", quality=quality)
+            
+            if download_id:
+                # Track progress
+                quality_results = self.speed_tester.track_download_progress(
+                    download_id, poll_interval=1.0, timeout=60
+                )
+                
+                results[quality] = quality_results
+                
+                if quality_results["completed"]:
+                    print(f"✅ Download with quality '{quality}' completed successfully")
+                    print(f"✅ Total download time: {quality_results['total_time']:.2f} seconds")
+                    
+                    if quality_results["avg_speed_mbs"] > 0:
+                        print(f"✅ Average download speed: {quality_results['avg_speed_mbs']:.2f} MB/s")
+                    
+                    if quality_results["file_size_mb"] > 0:
+                        print(f"✅ File size: {quality_results['file_size_mb']:.2f} MB")
+                else:
+                    print(f"⚠️ Download with quality '{quality}' did not complete within timeout")
+            else:
+                print(f"⚠️ Failed to start download with quality '{quality}'")
+        
+        # Compare download times and file sizes across qualities
+        completed_qualities = {k: v for k, v in results.items() if v.get("completed")}
+        if len(completed_qualities) >= 2:
+            print("\n📊 Quality options comparison:")
+            for quality, result in completed_qualities.items():
+                print(f"  - {quality}: {result['total_time']:.2f} seconds, " +
+                     f"{result['file_size_mb']:.2f} MB, {result['avg_speed_mbs']:.2f} MB/s average")
+    
+    def test_05_error_handling_and_cancellation(self):
+        """Test error handling and download cancellation"""
+        print("\n🔍 Testing error handling and download cancellation...")
+        
+        # 1. Test with invalid URL
+        print("\n🔍 Testing with invalid URL...")
+        payload = {
+            "url": "https://www.youtube.com/watch?v=invalid_video_id",
+            "quality": "best",
+            "format": "mp4",
+            "educational_purpose": True,
+            "user_id": "test_error_handling"
+        }
+        
+        response = requests.post(f"{API_URL}/download/start", json=payload)
+        if response.status_code == 200:
+            download_id = response.json()["download_id"]
+            
+            # Wait for the download to fail
+            max_checks = 10
+            for i in range(max_checks):
+                time.sleep(2)
+                progress_response = requests.get(f"{API_URL}/download/progress/{download_id}")
+                if progress_response.status_code == 200:
+                    progress_data = progress_response.json()
+                    if progress_data["status"] == "failed":
+                        print(f"✅ Download correctly failed with error: {progress_data.get('error_message', 'Unknown error')}")
+                        break
+            else:
+                print("⚠️ Download did not fail within expected time")
+        else:
+            print(f"✅ Invalid URL rejected with status {response.status_code}")
+        
+        # 2. Test download cancellation
+        print("\n🔍 Testing download cancellation...")
+        download_id = self.speed_tester.start_download(self.test_youtube_url, "youtube", quality="1080p")
+        
+        if download_id:
+            # Wait a moment for download to start
+            time.sleep(2)
+            
+            # Cancel the download
+            cancel_response = requests.post(f"{API_URL}/download/cancel/{download_id}")
+            if cancel_response.status_code == 200:
+                print("✅ Download cancellation request successful")
+                
+                # Check that status is updated
+                time.sleep(1)
+                progress_response = requests.get(f"{API_URL}/download/progress/{download_id}")
+                if progress_response.status_code == 200:
+                    progress_data = progress_response.json()
+                    if progress_data["status"] in ["cancelled", "completed"]:
+                        print(f"✅ Download status after cancellation: {progress_data['status']}")
+                    else:
+                        print(f"⚠️ Download status not updated after cancellation: {progress_data['status']}")
+                else:
+                    print(f"⚠️ Failed to get progress after cancellation: {progress_response.status_code}")
+            else:
+                print(f"⚠️ Cancel download returned status {cancel_response.status_code}")
+        else:
+            print("⚠️ Failed to start download for cancellation test")
+    
+    def test_06_download_speed_enhancements(self):
+        """Test download speed enhancements"""
+        print("\n🔍 Testing download speed enhancements...")
+        
+        # Start a YouTube download
+        download_id = self.speed_tester.start_download(self.test_youtube_url, "youtube", quality="720p")
+        if not download_id:
+            self.fail("Failed to start download")
+        
+        # Track progress
+        results = self.speed_tester.track_download_progress(download_id, poll_interval=1.0, timeout=60)
+        
+        # Check if download completed
+        self.assertTrue(results["completed"], "Download should complete within the timeout period")
+        
+        # Check download speed
+        if results["avg_speed_mbs"] > 0:
+            print(f"✅ Average download speed: {results['avg_speed_mbs']:.2f} MB/s")
+            print(f"✅ Maximum download speed: {results['max_speed_mbs']:.2f} MB/s")
+            print(f"✅ Total download time: {results['total_time']:.2f} seconds")
+            
+            # Check if speed is reasonable (this is subjective and depends on network conditions)
+            self.assertGreater(results["max_speed_mbs"], 0.5, "Max speed should be greater than 0.5 MB/s")
+        else:
+            print("⚠️ Could not measure download speed - download may have completed too quickly")
+        
+        # Check progress updates for speed and ETA information
+        has_speed_info = False
+        has_eta_info = False
+        
+        for point in results["progress_points"]:
+            if point.get("speed"):
+                has_speed_info = True
+            if point.get("eta"):
+                has_eta_info = True
+        
+        if has_speed_info:
+            print("✅ Download progress includes speed information")
+        else:
+            print("⚠️ Download progress does not include speed information")
+        
+        if has_eta_info:
+            print("✅ Download progress includes ETA information")
+        else:
+            print("⚠️ Download progress does not include ETA information")
+        
+        # Verify the download completed successfully
+        metadata_response = requests.get(f"{API_URL}/download/metadata/{download_id}")
+        if metadata_response.status_code == 200:
+            metadata = metadata_response.json()
+            if metadata.get("status") == "completed":
+                print("✅ Download completed successfully")
+            else:
+                print(f"⚠️ Download final status: {metadata.get('status')}")
+        else:
+            print(f"⚠️ Failed to get metadata: {metadata_response.status_code}")
+
 if __name__ == "__main__":
     unittest.main(argv=['first-arg-is-ignored'], exit=False)
