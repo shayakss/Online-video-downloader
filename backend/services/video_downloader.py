@@ -308,6 +308,58 @@ class VideoDownloaderService:
         except Exception as e:
             logger.error(f"Failed to cleanup download {download_id}: {str(e)}")
             return False
+            
+    def _perform_download(self, ydl_opts: dict, download_request: VideoDownload):
+        """Perform the actual download in a separate thread"""
+        download_id = download_request.download_id
+        download_dir = self.downloads_dir / download_id
+        
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            # Extract info first
+            info = ydl.extract_info(download_request.url, download=False)
+            
+            # Check if video is accessible
+            if info.get('availability') in ['private', 'premium_only', 'subscriber_only']:
+                raise ValueError(f"Video is {info.get('availability')} and cannot be downloaded")
+            
+            # Create metadata
+            metadata = VideoMetadata(
+                title=info.get('title', 'Unknown Title'),
+                description=info.get('description', '')[:500] if info.get('description') else None,
+                duration=info.get('duration'),
+                thumbnail_url=info.get('thumbnail'),
+                uploader=info.get('uploader') or info.get('channel'),
+                upload_date=info.get('upload_date'),
+                view_count=info.get('view_count'),
+                platform=download_request.platform,
+                format=download_request.format,
+                file_size=str(info.get('filesize_approx', '')) if info.get('filesize_approx') is not None else None
+            )
+            
+            # Update download record with metadata
+            download_request.metadata = metadata
+            download_request.status = DownloadStatus.DOWNLOADING
+            
+            # Start actual download
+            ydl.download([download_request.url])
+            
+            # Find downloaded file
+            downloaded_files = list(download_dir.glob('*'))
+            if downloaded_files:
+                main_file = max(downloaded_files, key=lambda f: f.stat().st_size)
+                download_request.file_path = str(main_file)
+                
+                # Update file size with actual size
+                actual_size = main_file.stat().st_size
+                download_request.metadata.file_size = f"{actual_size / (1024*1024):.1f} MB"
+            
+            download_request.status = DownloadStatus.COMPLETED
+            download_request.completed_at = datetime.utcnow()
+            
+            # Update progress
+            if download_id in self.active_downloads:
+                self.active_downloads[download_id].status = DownloadStatus.COMPLETED
+                self.active_downloads[download_id].progress_percent = 100.0
     
     def get_platform_quality_options(self, platform: PlatformType) -> List[QualityOption]:
         """Get available quality options for a platform"""
