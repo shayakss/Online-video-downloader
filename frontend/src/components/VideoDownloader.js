@@ -661,14 +661,28 @@ const VideoDownloader = ({ onDownloadComplete }) => {
                     
                     <div className="flex items-center gap-2">
                       {download.status === 'completed' && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => downloadFile(download.download_id)}
-                          className="text-green-600 hover:text-green-700 glass-effect"
-                        >
-                          <Download className="w-4 h-4" />
-                        </Button>
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => playMedia(download.download_id)}
+                            className="text-purple-400 hover:text-purple-300 glass-effect"
+                          >
+                            {localStorageService.getFileType(download.download_id) === 'audio' ? (
+                              <Music className="w-4 h-4" />
+                            ) : (
+                              <Video className="w-4 h-4" />
+                            )}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => downloadFile(download.download_id)}
+                            className="text-green-400 hover:text-green-300 glass-effect"
+                          >
+                            <Download className="w-4 h-4" />
+                          </Button>
+                        </>
                       )}
                       {download.status === 'downloading' && (
                         <Button
