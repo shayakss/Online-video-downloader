@@ -113,7 +113,25 @@
   -webkit-line-clamp: 3;
 }
 
-/* Professional Animations */
+/* Neon Animations */
+@keyframes neonPulse {
+  0%, 100% {
+    text-shadow: 0 0 5px var(--neon-primary), 0 0 10px var(--neon-primary), 0 0 15px var(--neon-primary);
+  }
+  50% {
+    text-shadow: 0 0 10px var(--neon-primary), 0 0 20px var(--neon-primary), 0 0 30px var(--neon-primary);
+  }
+}
+
+@keyframes neonGlow {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.8), 0 0 30px rgba(0, 255, 255, 0.6);
+  }
+}
+
 @keyframes fadeInUp {
   from {
     opacity: 0;
@@ -147,13 +165,18 @@
   }
 }
 
-@keyframes pulse-glow {
-  0%, 100% {
-    box-shadow: 0 0 5px rgba(99, 102, 241, 0.5);
-  }
-  50% {
-    box-shadow: 0 0 20px rgba(99, 102, 241, 0.8);
-  }
+@keyframes cyberpunkFlicker {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.8; }
+  75% { opacity: 0.9; }
+}
+
+.animate-neon-pulse {
+  animation: neonPulse 2s infinite;
+}
+
+.animate-neon-glow {
+  animation: neonGlow 2s infinite;
 }
 
 .animate-fade-in-up {
@@ -168,8 +191,8 @@
   animation: slideInRight 0.5s ease-out;
 }
 
-.animate-pulse-glow {
-  animation: pulse-glow 2s infinite;
+.animate-cyberpunk-flicker {
+  animation: cyberpunkFlicker 3s infinite;
 }
 
 /* Professional Button Styles */
