@@ -11,6 +11,12 @@ import aiofiles
 from typing import Optional, List
 
 # Import our models and services
+import sys
+from pathlib import Path
+
+# Add the current directory to the Python path
+sys.path.append(str(Path(__file__).parent))
+
 from models.video import (
     VideoDownloadRequest, 
     VideoDownload, 
