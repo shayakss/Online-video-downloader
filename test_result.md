@@ -295,6 +295,7 @@ test_plan:
     - "Video URL Validation"
     - "Video Download Initiation"
     - "Download Progress Tracking"
+    - "Quality Options Retrieval"
   stuck_tasks: []
   test_all: true
   test_priority: "high_first"
