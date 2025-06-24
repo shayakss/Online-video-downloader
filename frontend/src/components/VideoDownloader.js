@@ -18,6 +18,8 @@ const VideoDownloader = ({ onDownloadComplete }) => {
   const [currentDownloads, setCurrentDownloads] = useState([]);
   const [educationalConfirm, setEducationalConfirm] = useState(false);
 
+  const { toast } = useToast();
+
   const platformColors = {
     youtube: 'bg-red-500',
     instagram: 'bg-gradient-to-r from-purple-500 to-pink-500',
