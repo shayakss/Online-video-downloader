@@ -5,7 +5,7 @@ import { Input } from './ui/input';
 import { Badge } from './ui/badge';
 import { Progress } from './ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { toast } from './ui/toast';
+import { useToast } from '../hooks/use-toast';
 import { Download, Link, Play, Pause, X, CheckCircle, AlertCircle, Clock, ExternalLink } from 'lucide-react';
 import { videoApi, detectPlatform, formatDuration, formatDate } from '../services/api';
 
