@@ -169,7 +169,7 @@ class VideoDownloaderService:
         return progress_hook
     
     async def download_video(self, download_request: VideoDownload) -> VideoDownload:
-        """Download video from supported platforms"""
+        """Download video from supported platforms with optimized speed"""
         download_id = download_request.download_id
         
         try:
@@ -184,17 +184,29 @@ class VideoDownloaderService:
                 progress_percent=0.0
             )
             
-            # Configure yt-dlp options
+            # Optimized yt-dlp options for speed
             ydl_opts = {
                 'format': self._get_format_selector(download_request.quality, download_request.platform),
                 'outtmpl': str(download_dir / '%(title)s.%(ext)s'),
                 'progress_hooks': [self.create_progress_hook(download_id)],
                 'extractaudio': False,
-                'embed_subs': True,
+                'embed_subs': False,
                 'writesubtitles': False,
                 'writeautomaticsub': False,
+                'writedescription': False,
+                'writethumbnail': False,
+                'writeinfojson': False,
                 'ignoreerrors': False,
-                'no_warnings': False,
+                'no_warnings': True,
+                'retries': 3,
+                'fragment_retries': 3,
+                'skip_unavailable_fragments': True,
+                'concurrent_fragment_downloads': 8,  # Download 8 fragments concurrently
+                'http_chunk_size': 10485760,  # 10MB chunks for faster downloads
+                'extractor_retries': 2,
+                'socket_timeout': 30,
+                'keepvideo': False,
+                'ratelimit': None,  # No rate limiting for max speed
             }
             
             # Platform-specific configurations
