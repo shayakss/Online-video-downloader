@@ -204,42 +204,61 @@
 .btn-primary {
   @apply bg-gradient-to-r from-cyan-500 to-blue-600 text-white;
   @apply hover:from-cyan-400 hover:to-blue-500 hover:scale-105;
-  @apply transition-all duration-300 shadow-neon-lg hover:shadow-neon-xl;
-  box-shadow: var(--shadow-neon-lg);
+  @apply transition-all duration-300;
+  box-shadow: 0 8px 24px rgba(0, 255, 255, 0.25);
+}
+
+.btn-primary:hover {
+  box-shadow: 0 16px 32px rgba(0, 255, 255, 0.3);
 }
 
 .btn-secondary {
   @apply bg-gradient-to-r from-purple-500 to-pink-600 text-white;
   @apply hover:from-purple-400 hover:to-pink-500 hover:scale-105;
-  @apply transition-all duration-300 shadow-neon-lg hover:shadow-neon-xl;
+  @apply transition-all duration-300;
+  box-shadow: 0 8px 24px rgba(255, 0, 255, 0.25);
+}
+
+.btn-secondary:hover {
+  box-shadow: 0 16px 32px rgba(255, 0, 255, 0.3);
 }
 
 .btn-success {
   @apply bg-gradient-to-r from-green-400 to-cyan-500 text-black;
   @apply hover:from-green-300 hover:to-cyan-400 hover:scale-105;
-  @apply transition-all duration-300 shadow-neon-lg hover:shadow-neon-xl;
+  @apply transition-all duration-300;
   color: #000000;
   text-shadow: 0 0 10px rgba(0, 255, 65, 0.8);
+  box-shadow: 0 8px 24px rgba(0, 255, 65, 0.25);
+}
+
+.btn-success:hover {
+  box-shadow: 0 16px 32px rgba(0, 255, 65, 0.3);
 }
 
 .btn-danger {
   @apply bg-gradient-to-r from-red-500 to-pink-600 text-white;
   @apply hover:from-red-400 hover:to-pink-500 hover:scale-105;
-  @apply transition-all duration-300 shadow-neon-lg hover:shadow-neon-xl;
+  @apply transition-all duration-300;
+  box-shadow: 0 8px 24px rgba(255, 0, 128, 0.25);
+}
+
+.btn-danger:hover {
+  box-shadow: 0 16px 32px rgba(255, 0, 128, 0.3);
 }
 
 .btn-neon {
   background: transparent;
-  border: 2px solid var(--neon-primary);
-  color: var(--neon-primary);
-  text-shadow: var(--neon-glow-primary);
+  border: 2px solid #00ffff;
+  color: #00ffff;
+  text-shadow: 0 0 20px rgba(0, 255, 255, 0.5), 0 0 40px rgba(0, 255, 255, 0.3);
   transition: all 0.3s ease;
 }
 
 .btn-neon:hover {
-  background: var(--neon-primary);
+  background: #00ffff;
   color: #000000;
-  box-shadow: var(--neon-glow-primary);
+  box-shadow: 0 0 20px rgba(0, 255, 255, 0.5), 0 0 40px rgba(0, 255, 255, 0.3);
   transform: scale(1.05);
 }
 
