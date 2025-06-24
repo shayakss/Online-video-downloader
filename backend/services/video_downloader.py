@@ -201,6 +201,24 @@ class VideoDownloaderService:
             if download_request.platform == PlatformType.INSTAGRAM:
                 ydl_opts.update({
                     'cookiefile': None,  # Instagram may require cookies for some content
+                    'extractor_retries': 3,
+                    'http_headers': {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                    }
+                })
+            elif download_request.platform == PlatformType.FACEBOOK:
+                ydl_opts.update({
+                    'extractor_retries': 3,
+                    'http_headers': {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                    }
+                })
+            elif download_request.platform == PlatformType.TIKTOK:
+                ydl_opts.update({
+                    'extractor_retries': 3,
+                    'http_headers': {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                    }
                 })
             
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
